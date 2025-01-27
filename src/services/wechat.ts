@@ -1,15 +1,28 @@
+import axios from 'axios';
+
 export class WechatService {
   // 微信登录
   async login(code: string) {
     try {
       // 使用云调用方式获取用户信息
-      const response = await fetch('http://api.weixin.qq.com/sns/jscode2session', {
+      const result = await axios({
         method: 'POST',
-        body: JSON.stringify({ code })
+        url: 'http://api.weixin.qq.com/sns/jscode2session',
+        data: {
+          js_code: code,
+          grant_type: 'authorization_code'
+        },
+        headers: {
+          'content-type': 'application/json',
+          // 云托管环境会自动注入 X-WX-SERVICE 等头部
+          'X-WX-SERVICE': 'true'
+        }
       });
-      return await response.json();
+      
+      return result.data;
     } catch (error) {
-      throw new Error('登录失败：' + error.message);
+      console.error('登录失败:', error.response?.data || error.message);
+      throw new Error('登录失败：' + (error.response?.data?.errmsg || error.message));
     }
   }
 
@@ -17,16 +30,25 @@ export class WechatService {
   async createPayment({ orderId, amount }: { orderId: string; amount: number }) {
     try {
       // 使用云调用方式创建支付订单
-      const response = await fetch('http://api.weixin.qq.com/pay/unifiedorder', {
+      const result = await axios({
         method: 'POST',
-        body: JSON.stringify({ 
+        url: 'http://api.weixin.qq.com/pay/unifiedorder',
+        data: {
           out_trade_no: orderId,
-          total_fee: amount
-        })
+          total_fee: amount,
+          body: 'AI壁纸生成服务',
+          trade_type: 'JSAPI'
+        },
+        headers: {
+          'content-type': 'application/json',
+          'X-WX-SERVICE': 'true'
+        }
       });
-      return await response.json();
+
+      return result.data;
     } catch (error) {
-      throw new Error('创建支付订单失败：' + error.message);
+      console.error('创建支付订单失败:', error.response?.data || error.message);
+      throw new Error('创建支付订单失败：' + (error.response?.data?.errmsg || error.message));
     }
   }
 }
